@@ -13,3 +13,6 @@ max_line_length = 160
 
 [{Makefile,rules}]
 indent_style = tab
+
+[*.py]
+indent_size = 4
