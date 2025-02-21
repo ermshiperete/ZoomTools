@@ -3,7 +3,6 @@
 import argparse
 import logging
 import subprocess
-import time
 
 
 def _get_zoom_window_id(name):
@@ -20,12 +19,14 @@ def _bring_to_foreground(window_id, sync=True):
         result = subprocess.run(['xdotool', 'windowactivate', '--sync', window_id], stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.decode('utf-8')
     else:
         result = subprocess.run(['xdotool', 'windowactivate', window_id], stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.decode('utf-8')
+    logging.debug(f'xdotool windowactivate {window_id}: {result}')
     return result.index('failed') < 0 if result else True
 
 
 def _restore_zoom_window():
     mini_window_id = _get_zoom_window_id('zoom_linux_float_video_window')
     if not mini_window_id:
+        logging.warning("No Zoom mini window found")
         return False  # No Zoom window found
 
     logging.debug(f"Window {mini_window_id}")
@@ -71,18 +72,24 @@ def activate_window():
     # xdotool windowactivate $m
     try:
         window_id = _get_zoom_window_id('Meeting')
+        logging.debug(f"Window ID: {window_id}")
         if not window_id:
             return False  # No Zoom window found
 
         if _bring_to_foreground(window_id, False):
+            logging.debug("Bring to foreground returned True")
             _bring_to_foreground(window_id, True)
         else:
+            logging.debug("Bring to foreground returned False")
             if not _restore_zoom_window():
+                logging.warning("Failed to restore Zoom window")
                 return False
 
             # Bring the window to the foreground
             if not _bring_to_foreground(window_id, True):
+                logging.warning("Failed to bring Zoom window to the foreground")
                 return False
+        logging.debug("Zoom window found and brought to the foreground")
         return True  # Zoom window found and brought to the foreground
     except Exception as e:
         logging.error(f"An error occurred: {e}")
@@ -113,7 +120,11 @@ if __name__ == "__main__":
     parser.add_argument('--toggle-audio', action='store_true', help='Toggle audio')
     parser.add_argument('--toggle-video', action='store_true', help='Toggle video')
     parser.add_argument('--end-meeting', action='store_true', help='End meeting')
+    parser.add_argument('--debug', action='store_true', help='Enable debug logging')
     args = parser.parse_args()
+
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
 
     current_window = get_current_active_window()
 
