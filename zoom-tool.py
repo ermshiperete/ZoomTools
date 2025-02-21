@@ -13,6 +13,12 @@ def _get_zoom_window_id(name):
     return window_ids[0]
 
 
+def _is_minimized(window_id):
+    result = subprocess.run(['xprop', '-id', window_id, 'WM_STATE'], stdout=subprocess.PIPE)
+    logging.debug(f'xprop -id {window_id} WM_STATE: {result.stdout.decode("utf-8")}')
+    return 'Withdrawn' in result.stdout.decode('utf-8')
+
+
 def _bring_to_foreground(window_id, sync=True):
     # Bring the window to the foreground
     if sync:
@@ -75,6 +81,14 @@ def activate_window():
         logging.debug(f"Window ID: {window_id}")
         if not window_id:
             return False  # No Zoom window found
+
+        if _is_minimized(window_id):
+            logging.debug("Zoom window is minimized")
+            if not _restore_zoom_window():
+                logging.warning("Failed to restore Zoom window")
+                return False
+            logging.debug("Restored Zoom window")
+            return True
 
         if _bring_to_foreground(window_id, False):
             logging.debug("Bring to foreground returned True")
